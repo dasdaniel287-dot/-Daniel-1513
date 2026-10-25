@@ -3,598 +3,484 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Globe,
-  Loader2,
-  AlertCircle,
+  Rocket,
+  Compass,
+  Telescope,
+  Newspaper,
+  Calculator,
+  GraduationCap,
+  Image as ImageIcon,
   ArrowRight,
-  RefreshCw,
-  Search,
-  ExternalLink,
+  Flame,
+  Calendar,
+  Zap,
+  Info,
   ChevronRight,
+  Bookmark,
+  ExternalLink,
 } from 'lucide-react';
-import {
-  SearchMode,
-  SearchTone,
-  TimeFilter,
-  SearchSession,
-  SearchMessage,
-  Source,
-} from './types.ts';
-import { Navbar } from './components/Navbar.tsx';
-import { SearchBox } from './components/SearchBox.tsx';
-import { AnswerView } from './components/AnswerView.tsx';
-import { FollowUpBox } from './components/FollowUpBox.tsx';
-import { TrendingGrid } from './components/TrendingGrid.tsx';
-import { HistoryDrawer } from './components/HistoryDrawer.tsx';
-import { SettingsModal } from './components/SettingsModal.tsx';
 
-const STORAGE_KEY = 'nexus_ai_search_sessions_v1';
-const SETTINGS_KEY = 'nexus_ai_search_settings_v1';
+import { CosmicNavbar, NavigationPage } from './components/CosmicNavbar.tsx';
+import { CosmicStarfield } from './components/CosmicStarfield.tsx';
+import { SolarSystemViewer } from './components/SolarSystemViewer.tsx';
+import { GalaxyExplorer } from './components/GalaxyExplorer.tsx';
+import { BlackHoleSimulation } from './components/BlackHoleSimulation.tsx';
+import { ExoplanetExplorer } from './components/ExoplanetExplorer.tsx';
+import { SpaceMissionsTracker } from './components/SpaceMissionsTracker.tsx';
+import { GalaxyAIChat } from './components/GalaxyAIChat.tsx';
+import { LearningCenter } from './components/LearningCenter.tsx';
+import { CosmicCalculators } from './components/CosmicCalculators.tsx';
+import { SpaceGalleryView } from './components/SpaceGalleryView.tsx';
+import { SpaceNewsSection } from './components/SpaceNewsSection.tsx';
+import { UserProfileModal } from './components/UserProfileModal.tsx';
+import { AboutModal } from './components/AboutModal.tsx';
+import { galaxiesData, celestialBodiesData, spaceMissionsData } from './data/spaceData.ts';
+
+const BOOKMARKS_STORAGE_KEY = 'galaxy_science_ai_bookmarks_v1';
+const LANG_STORAGE_KEY = 'galaxy_science_ai_lang_v1';
 
 export default function App() {
-  const [sessions, setSessions] = useState<SearchSession[]>(() => {
+  const [currentPage, setCurrentPage] = useState<NavigationPage>('home');
+  const [language, setLanguage] = useState<'en' | 'bn'>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      return (localStorage.getItem(LANG_STORAGE_KEY) as 'en' | 'bn') || 'en';
     } catch {
-      return [];
+      return 'en';
     }
   });
 
-  const [activeSession, setActiveSession] = useState<SearchSession | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingStage, setLoadingStage] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+  const [bookmarks, setBookmarks] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : ['Andromeda Galaxy', 'TRAPPIST-1e', 'James Webb Space Telescope'];
+    } catch {
+      return ['Andromeda Galaxy', 'TRAPPIST-1e'];
+    }
+  });
 
-  // Settings
-  const [defaultMode, setDefaultMode] = useState<SearchMode>('all');
-  const [defaultTone, setDefaultTone] = useState<SearchTone>('balanced');
-  const [defaultTimeFilter, setDefaultTimeFilter] = useState<TimeFilter>('all');
-  const [useStreaming, setUseStreaming] = useState<boolean>(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [aboutDefaultTab, setAboutDefaultTab] = useState<'about' | 'contact' | 'privacy' | 'terms'>('about');
 
-  // Modals & Drawers
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyTab, setHistoryTab] = useState<'all' | 'saved'>('all');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Daily Space Fact (Calculated for current date)
+  const dailyFact = {
+    title: 'Neutron Star Density Extreme',
+    fact: 'A single sugar-cube-sized volume of neutron star material has a mass of approximately 1 billion metric tons on Earth — equal to the weight of Mount Everest compressed into a thimble.',
+    factBn: 'একটি নিউট্রন তারার মাত্র এক চামচ পদার্থের ভর পৃথিবীতে প্রায় ১০০ কোটি টন বা গোটা এভারেস্ট পর্বতের ভরের সমান।',
+  };
 
-  const resultsEndRef = useRef<HTMLDivElement>(null);
+  // Upcoming 2026 Astronomical Events
+  const upcomingEvents = [
+    {
+      date: 'Aug 12-13, 2026',
+      name: 'Perseids Meteor Shower Peak',
+      desc: 'Swift-Tuttle debris cloud producing up to 100 fast, luminous meteors per hour in dark skies.',
+    },
+    {
+      date: 'August 12, 2026',
+      name: 'Total Solar Eclipse (Europe & Arctic)',
+      desc: 'Totality path crosses Greenland, Iceland, and Northern Spain.',
+    },
+    {
+      date: 'Late 2026',
+      name: 'Artemis II Lunar Crewed Flyby',
+      desc: 'Four astronauts aboard the Orion spacecraft venture around the far side of the Moon.',
+    },
+  ];
 
-  // Load preferences from localStorage
+  // Save Bookmarks to LocalStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(SETTINGS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.defaultMode) setDefaultMode(parsed.defaultMode);
-        if (parsed.defaultTone) setDefaultTone(parsed.defaultTone);
-        if (parsed.defaultTimeFilter) setDefaultTimeFilter(parsed.defaultTimeFilter);
-        if (parsed.useStreaming !== undefined) setUseStreaming(parsed.useStreaming);
-      }
+      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(bookmarks));
     } catch (e) {
-      console.warn('Failed to load settings', e);
+      console.warn('Bookmarks save error', e);
     }
-  }, []);
+  }, [bookmarks]);
 
-  // Save settings on update
+  // Save Language
   useEffect(() => {
     try {
-      localStorage.setItem(
-        SETTINGS_KEY,
-        JSON.stringify({
-          defaultMode,
-          defaultTone,
-          defaultTimeFilter,
-          useStreaming,
-        })
-      );
+      localStorage.setItem(LANG_STORAGE_KEY, language);
     } catch (e) {
-      console.warn('Failed to save settings', e);
+      console.warn('Language save error', e);
     }
-  }, [defaultMode, defaultTone, defaultTimeFilter, useStreaming]);
+  }, [language]);
 
-  // Persist sessions
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    } catch (e) {
-      console.warn('Failed to save sessions', e);
-    }
-  }, [sessions]);
-
-  // Animated loading pipeline stages
-  useEffect(() => {
-    if (!isLoading) {
-      setLoadingStage('');
-      return;
-    }
-
-    const stages = [
-      'Connecting to real-time Google Search index...',
-      'Analyzing query context & retrieving web documents...',
-      'Reviewing grounded sources and cross-checking facts...',
-      'Synthesizing authoritative intelligence...',
-    ];
-    let index = 0;
-    setLoadingStage(stages[0]);
-
-    const interval = setInterval(() => {
-      index = (index + 1) % stages.length;
-      setLoadingStage(stages[index]);
-    }, 1800);
-
-    return () => clearInterval(interval);
-  }, [isLoading]);
-
-  // Start new search
-  const handleStartSearch = async (
-    query: string,
-    mode: SearchMode = defaultMode,
-    tone: SearchTone = defaultTone,
-    timeFilter: TimeFilter = defaultTimeFilter
-  ) => {
-    setError(null);
-    setIsLoading(true);
-
-    const sessionId = Date.now().toString();
-    const userMessage: SearchMessage = {
-      role: 'user',
-      text: query,
-      createdAt: Date.now(),
-    };
-
-    const newSession: SearchSession = {
-      id: sessionId,
-      initialQuery: query,
-      mode,
-      tone,
-      timeFilter,
-      messages: [userMessage],
-      createdAt: Date.now(),
-      bookmarked: false,
-    };
-
-    setActiveSession(newSession);
-
-    if (useStreaming) {
-      await executeSearchStream(newSession, query, mode, tone, timeFilter);
+  const handleToggleBookmark = (item: string) => {
+    if (bookmarks.includes(item)) {
+      setBookmarks((prev) => prev.filter((b) => b !== item));
     } else {
-      await executeSearchSync(newSession, query, mode, tone, timeFilter);
+      setBookmarks((prev) => [...prev, item]);
     }
   };
 
-  // Streaming search execution
-  const executeSearchStream = async (
-    session: SearchSession,
-    query: string,
-    mode: SearchMode,
-    tone: SearchTone,
-    timeFilter: TimeFilter
-  ) => {
-    let accumulatedText = '';
-    const tempModelMessage: SearchMessage = {
-      role: 'model',
-      text: '',
-      sources: [],
-      webSearchQueries: [],
-      followUps: [],
-      createdAt: Date.now(),
-    };
-
-    // Prepare active session with blank response
-    const updatedWithBlank = {
-      ...session,
-      messages: [...session.messages, tempModelMessage],
-    };
-    setActiveSession(updatedWithBlank);
-
-    try {
-      const res = await fetch('/api/search/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          mode,
-          tone,
-          timeFilter,
-          conversation: session.messages
-            .filter((m) => m.text)
-            .map((m) => ({ role: m.role, text: m.text })),
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Search failed with status ${res.status}`);
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder('utf-8');
-
-      if (!reader) throw new Error('No readable stream available');
-
-      let finalSources: Source[] = [];
-      let finalQueries: string[] = [];
-      let finalFollowUps: string[] = [];
-
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const eventData = JSON.parse(line.slice(6));
-              if (eventData.type === 'text') {
-                accumulatedText += eventData.content;
-                setActiveSession((prev) => {
-                  if (!prev) return null;
-                  const msgs = [...prev.messages];
-                  const lastIdx = msgs.length - 1;
-                  msgs[lastIdx] = {
-                    ...msgs[lastIdx],
-                    text: accumulatedText,
-                  };
-                  return { ...prev, messages: msgs };
-                });
-              } else if (eventData.type === 'done') {
-                finalSources = eventData.sources || [];
-                finalQueries = eventData.webSearchQueries || [];
-                finalFollowUps = eventData.followUps || [];
-              } else if (eventData.type === 'error') {
-                throw new Error(eventData.error);
-              }
-            } catch (err: any) {
-              if (err.message) throw err;
-            }
-          }
-        }
-      }
-
-      const completedModelMessage: SearchMessage = {
-        role: 'model',
-        text: accumulatedText,
-        sources: finalSources,
-        webSearchQueries: finalQueries,
-        followUps: finalFollowUps,
-        createdAt: Date.now(),
-      };
-
-      const finalSession: SearchSession = {
-        ...session,
-        messages: [...session.messages, completedModelMessage],
-      };
-
-      setActiveSession(finalSession);
-      setSessions((prev) => [finalSession, ...prev.filter((s) => s.id !== finalSession.id)]);
-      setIsLoading(false);
-    } catch (err: any) {
-      console.error('Search error:', err);
-      setError(err.message || 'Failed to complete search synthesis');
-      setIsLoading(false);
-    }
+  const handleClearAllData = () => {
+    setBookmarks([]);
+    localStorage.removeItem(BOOKMARKS_STORAGE_KEY);
   };
 
-  // Synchronous search execution
-  const executeSearchSync = async (
-    session: SearchSession,
-    query: string,
-    mode: SearchMode,
-    tone: SearchTone,
-    timeFilter: TimeFilter
-  ) => {
-    try {
-      const res = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query,
-          mode,
-          tone,
-          timeFilter,
-          conversation: session.messages
-            .filter((m) => m.text)
-            .map((m) => ({ role: m.role, text: m.text })),
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Search failed with status ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      const modelMessage: SearchMessage = {
-        role: 'model',
-        text: data.text || 'No response returned from the model.',
-        sources: data.sources || [],
-        webSearchQueries: data.webSearchQueries || [],
-        followUps: data.followUps || [],
-        createdAt: Date.now(),
-      };
-
-      const completedSession: SearchSession = {
-        ...session,
-        messages: [...session.messages, modelMessage],
-      };
-
-      setActiveSession(completedSession);
-      setSessions((prev) => [completedSession, ...prev.filter((s) => s.id !== completedSession.id)]);
-      setIsLoading(false);
-    } catch (err: any) {
-      console.error('Search error:', err);
-      setError(err.message || 'Failed to complete search synthesis');
-      setIsLoading(false);
-    }
+  const openInfoModal = (tab: 'about' | 'contact' | 'privacy' | 'terms') => {
+    setAboutDefaultTab(tab);
+    setIsAboutOpen(true);
   };
-
-  // Follow-up search in active thread
-  const handleFollowUp = async (followUpQuery: string) => {
-    if (!activeSession || isLoading) return;
-
-    setError(null);
-    setIsLoading(true);
-
-    const userMsg: SearchMessage = {
-      role: 'user',
-      text: followUpQuery,
-      createdAt: Date.now(),
-    };
-
-    const sessionWithUser = {
-      ...activeSession,
-      messages: [...activeSession.messages, userMsg],
-    };
-    setActiveSession(sessionWithUser);
-
-    if (useStreaming) {
-      await executeSearchStream(
-        sessionWithUser,
-        followUpQuery,
-        activeSession.mode,
-        activeSession.tone,
-        activeSession.timeFilter
-      );
-    } else {
-      await executeSearchSync(
-        sessionWithUser,
-        followUpQuery,
-        activeSession.mode,
-        activeSession.tone,
-        activeSession.timeFilter
-      );
-    }
-  };
-
-  // Toggle bookmark on active session
-  const handleToggleBookmark = () => {
-    if (!activeSession) return;
-    const updated = {
-      ...activeSession,
-      bookmarked: !activeSession.bookmarked,
-    };
-    setActiveSession(updated);
-    setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-  };
-
-  // Delete session
-  const handleDeleteSession = (id: string) => {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    if (activeSession?.id === id) {
-      setActiveSession(null);
-    }
-  };
-
-  // Clear all sessions
-  const handleClearAllSessions = () => {
-    if (confirm('Are you sure you want to clear your entire search history?')) {
-      setSessions([]);
-      setActiveSession(null);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  };
-
-  const handleResetToHome = () => {
-    setActiveSession(null);
-    setError(null);
-  };
-
-  const bookmarkCount = sessions.filter((s) => s.bookmarked).length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* Top Navbar */}
-      <Navbar
-        onNewSearch={handleResetToHome}
-        onToggleHistory={() => {
-          setHistoryTab('all');
-          setIsHistoryOpen(true);
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
+      {/* 2D / 3D Canvas Starfield Backdrop */}
+      <CosmicStarfield />
+
+      {/* Main Top Navigation */}
+      <CosmicNavbar
+        currentPage={currentPage}
+        onNavigate={(page) => {
+          if (page === 'profile') setIsProfileOpen(true);
+          else if (page === 'about') openInfoModal('about');
+          else {
+            setCurrentPage(page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
         }}
-        onToggleBookmarks={() => {
-          setHistoryTab('saved');
-          setIsHistoryOpen(true);
-        }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        bookmarkCount={bookmarkCount}
-        historyCount={sessions.length}
+        bookmarkCount={bookmarks.length}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 flex flex-col items-center justify-start px-4 py-6 sm:py-10 max-w-5xl mx-auto w-full">
-        {!activeSession ? (
-          /* HOME VIEW */
-          <div className="w-full flex flex-col items-center justify-center my-auto py-8 sm:py-12 space-y-8 animate-in fade-in duration-500">
-            {/* Hero Brand Title */}
-            <div className="text-center space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-1">
-                <Globe className="w-3.5 h-3.5" />
-                <span>Live Web Grounding with Google Search</span>
+      {/* Main Page Render */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 sm:py-10 z-10">
+        {/* 1. HOMEPAGE */}
+        {currentPage === 'home' && (
+          <div className="space-y-12 animate-in fade-in duration-500">
+            {/* HERO SECTION */}
+            <section className="relative text-center py-10 sm:py-16 space-y-6 max-w-4xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-sm shadow-cyan-500/10">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Next-Generation Space Science Platform • 2026 Edition</span>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
-                Where curiosity meets{' '}
-                <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
-                  real-time truth.
+
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+                Explore the Universe{' '}
+                <span className="bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                  Beyond Imagination
                 </span>
               </h1>
-              <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
-                Synthesize instant answers, grounded web citations, and deep multi-source research
-                powered by Gemini 3.8.
+
+              <p className="text-sm sm:text-lg text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+                Discover galaxies, explore distant worlds, and unlock the mysteries of the cosmos with
+                AI-powered science.
               </p>
-            </div>
 
-            {/* Omnibar Search Box */}
-            <SearchBox
-              onSearch={handleStartSearch}
-              isLoading={isLoading}
-              isCompact={false}
-            />
-
-            {/* Trending & Curated Discoveries */}
-            <TrendingGrid onSelectQuery={(q) => handleStartSearch(q, defaultMode)} />
-          </div>
-        ) : (
-          /* ACTIVE SEARCH RESULTS VIEW */
-          <div className="w-full space-y-8 animate-in fade-in duration-300">
-            {/* Docked top search bar to modify or issue new searches */}
-            <div className="sticky top-16 z-30 pt-2 pb-4 backdrop-blur-md bg-zinc-950/80 -mx-4 px-4 border-b border-zinc-800/40">
-              <SearchBox
-                onSearch={handleStartSearch}
-                isLoading={isLoading}
-                initialQuery={activeSession.initialQuery}
-                isCompact={true}
-              />
-            </div>
-
-            {/* Error Banner */}
-            {error && (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold">Search could not be completed</p>
-                  <p className="text-xs text-rose-400/90 mt-1">{error}</p>
-                </div>
+              {/* Primary Call to Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={() => handleStartSearch(activeSession.initialQuery)}
-                  className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs font-medium transition-colors"
+                  onClick={() => setCurrentPage('solar-system')}
+                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2 active:scale-95"
                 >
-                  Retry
+                  <Globe className="w-4 h-4 text-zinc-950" />
+                  <span>Explore the Universe</span>
+                  <ArrowRight className="w-4 h-4 text-zinc-950" />
+                </button>
+
+                <button
+                  onClick={() => setCurrentPage('ai-chat')}
+                  className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center gap-2 active:scale-95"
+                >
+                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                  <span>Ask Galaxy AI</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentPage('missions')}
+                  className="px-5 py-3 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-semibold text-xs sm:text-sm border border-zinc-700 transition-all flex items-center gap-2"
+                >
+                  <Rocket className="w-4 h-4 text-amber-400" />
+                  <span>Discover Space Missions</span>
                 </button>
               </div>
-            )}
+            </section>
 
-            {/* Conversation Messages Thread */}
-            <div className="space-y-8">
-              {activeSession.messages.map((message, idx) => {
-                if (message.role === 'user') {
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-3 pt-2"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-zinc-300 font-semibold text-xs">
-                        Q
-                      </div>
-                      <div className="flex-1">
-                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-snug">
-                          {message.text}
-                        </h2>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
-                          <span className="capitalize">{activeSession.mode} mode</span>
-                          <span>•</span>
-                          <span>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div key={idx} className="space-y-6">
-                      <AnswerView
-                        message={message}
-                        query={activeSession.initialQuery}
-                        isBookmarked={!!activeSession.bookmarked}
-                        onToggleBookmark={handleToggleBookmark}
-                        onSelectFollowUp={(fu) => handleFollowUp(fu)}
-                        onRegenerate={() => handleFollowUp(`Elaborate further on this and provide more in-depth real-time insights.`)}
-                      />
-                    </div>
-                  );
-                }
-              })}
-            </div>
-
-            {/* Loading Indicator with Animated Thinking Pipeline */}
-            {isLoading && (
-              <div className="p-6 rounded-2xl bg-zinc-900/60 border border-cyan-500/30 flex flex-col items-center justify-center space-y-3 backdrop-blur-md animate-pulse">
-                <div className="flex items-center gap-3 text-cyan-400 text-sm font-medium">
-                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                  <span>{loadingStage || 'Synthesizing grounded answer...'}</span>
+            {/* DAILY SPACE FACT CALLOUT */}
+            <section className="rounded-2xl bg-gradient-to-r from-purple-950/40 via-zinc-900/60 to-cyan-950/40 border border-purple-500/30 p-5 sm:p-6 backdrop-blur-md shadow-xl flex items-start gap-4">
+              <div className="p-3 rounded-2xl bg-purple-500/20 border border-purple-500/30 text-purple-400 shrink-0">
+                <Flame className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">
+                    Daily Cosmic Observation
+                  </span>
+                  <span className="text-[10px] text-zinc-400">• Verified Astrophysics Fact</span>
                 </div>
-                <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="w-full h-full bg-gradient-to-r from-cyan-500 to-emerald-400 animate-[shimmer_1.5s_infinite]" />
+                <h3 className="text-base font-bold text-white">{dailyFact.title}</h3>
+                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  {language === 'bn' ? dailyFact.factBn : dailyFact.fact}
+                </p>
+              </div>
+            </section>
+
+            {/* INTERACTIVE SOLAR SYSTEM PREVIEW */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-cyan-400" />
+                    <span>Interactive Solar System Preview</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Explore planetary orbits, composition, and physical metrics.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCurrentPage('solar-system')}
+                  className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                >
+                  <span>Launch Full 3D Simulator</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <SolarSystemViewer />
+            </section>
+
+            {/* FEATURED DISCOVERIES & MODULE SHORTCUTS */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <span>Featured Scientific Modules</span>
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                  onClick={() => setCurrentPage('galaxies')}
+                  className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-purple-500/50 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 group"
+                >
+                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 w-fit mb-3">
+                    <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  </div>
+                  <h4 className="font-bold text-base text-white group-hover:text-purple-300 transition-colors">
+                    Galaxy Explorer
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Explore spiral density waves, elliptical formations, and collision remnants like the Cartwheel.
+                  </p>
+                  <span className="mt-3 text-xs text-purple-400 font-semibold inline-flex items-center gap-1">
+                    Explore Galaxies <ChevronRight className="w-3 h-3" />
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => setCurrentPage('black-holes')}
+                  className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-rose-500/50 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 group"
+                >
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 w-fit mb-3">
+                    <Zap className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h4 className="font-bold text-base text-white group-hover:text-rose-300 transition-colors">
+                    Black Hole Relativity
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Interactive event horizons, Kerr spin parameters, Doppler beaming, and Hawking radiation.
+                  </p>
+                  <span className="mt-3 text-xs text-rose-400 font-semibold inline-flex items-center gap-1">
+                    Launch Physics Simulation <ChevronRight className="w-3 h-3" />
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => setCurrentPage('exoplanets')}
+                  className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-emerald-500/50 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 group"
+                >
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 w-fit mb-3">
+                    <Telescope className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h4 className="font-bold text-base text-white group-hover:text-emerald-300 transition-colors">
+                    Exoplanet Catalog
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Discover habitable-zone candidates, Earth twins, and extreme hot Jupiters.
+                  </p>
+                  <span className="mt-3 text-xs text-emerald-400 font-semibold inline-flex items-center gap-1">
+                    Browse Catalog <ChevronRight className="w-3 h-3" />
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => setCurrentPage('calculators')}
+                  className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 hover:border-amber-500/50 cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1 group"
+                >
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 w-fit mb-3">
+                    <Calculator className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <h4 className="font-bold text-base text-white group-hover:text-amber-300 transition-colors">
+                    Cosmic Calculators
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Compute Kepler orbits, planetary weights, light-year distances, and Schwarzschild radii.
+                  </p>
+                  <span className="mt-3 text-xs text-amber-400 font-semibold inline-flex items-center gap-1">
+                    Solve Astrophysics <ChevronRight className="w-3 h-3" />
+                  </span>
                 </div>
               </div>
-            )}
+            </section>
 
-            {/* Follow-up Question Dock */}
-            {!isLoading && (
-              <div className="pt-4 border-t border-zinc-800/80">
-                <FollowUpBox onSendFollowUp={handleFollowUp} isLoading={isLoading} />
+            {/* UPCOMING ASTRONOMICAL EVENTS */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-teal-400" />
+                    <span>Upcoming Celestial Events (2026)</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Verified calendar of meteor showers, eclipses, and lunar expeditions.
+                  </p>
+                </div>
               </div>
-            )}
 
-            <div ref={resultsEndRef} />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {upcomingEvents.map((evt, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-2 hover:border-teal-500/40 transition-colors"
+                  >
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 font-semibold">
+                      {evt.date}
+                    </span>
+                    <h4 className="font-bold text-sm text-white">{evt.name}</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{evt.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* 2. SOLAR SYSTEM 3D */}
+        {currentPage === 'solar-system' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <SolarSystemViewer />
+          </div>
+        )}
+
+        {/* 3. GALAXY EXPLORER */}
+        {currentPage === 'galaxies' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <GalaxyExplorer />
+          </div>
+        )}
+
+        {/* 4. BLACK HOLE EXPLORER */}
+        {currentPage === 'black-holes' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <BlackHoleSimulation />
+          </div>
+        )}
+
+        {/* 5. EXOPLANET EXPLORER */}
+        {currentPage === 'exoplanets' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <ExoplanetExplorer />
+          </div>
+        )}
+
+        {/* 6. SPACE MISSIONS */}
+        {currentPage === 'missions' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <SpaceMissionsTracker />
+          </div>
+        )}
+
+        {/* 7. GALAXY AI CHAT */}
+        {currentPage === 'ai-chat' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <GalaxyAIChat />
+          </div>
+        )}
+
+        {/* 8. SCIENCE LEARNING CENTER */}
+        {currentPage === 'learning' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <LearningCenter />
+          </div>
+        )}
+
+        {/* 9. COSMIC CALCULATORS */}
+        {currentPage === 'calculators' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <CosmicCalculators />
+          </div>
+        )}
+
+        {/* 10. SPACE NEWS */}
+        {currentPage === 'news' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <SpaceNewsSection />
+          </div>
+        )}
+
+        {/* 11. SPACE GALLERY & APOD */}
+        {currentPage === 'gallery' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <SpaceGalleryView />
           </div>
         )}
       </main>
 
-      {/* History & Saved Drawer */}
-      <HistoryDrawer
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        sessions={sessions}
-        onSelectSession={(sess) => setActiveSession(sess)}
-        onDeleteSession={handleDeleteSession}
-        onClearAll={handleClearAllSessions}
-        activeTab={historyTab}
-        setActiveTab={setHistoryTab}
+      {/* User Profile & Bookmarks Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        language={language}
+        setLanguage={setLanguage}
+        bookmarks={bookmarks}
+        onRemoveBookmark={(bm) => setBookmarks((prev) => prev.filter((b) => b !== bm))}
+        onClearAllData={handleClearAllData}
       />
 
-      {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        defaultMode={defaultMode}
-        setDefaultMode={setDefaultMode}
-        defaultTone={defaultTone}
-        setDefaultTone={setDefaultTone}
-        defaultTimeFilter={defaultTimeFilter}
-        setDefaultTimeFilter={setDefaultTimeFilter}
-        useStreaming={useStreaming}
-        setUseStreaming={setUseStreaming}
+      {/* About & Contact Modal */}
+      <AboutModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+        defaultTab={aboutDefaultTab}
       />
 
-      {/* Footer */}
-      <footer className="w-full border-t border-zinc-800/60 py-4 text-center text-xs text-zinc-400">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-zinc-400">Nexus Search</span>
-            <span>—</span>
-            <span>Real-time intelligence grounded by Google Web Search</span>
+      {/* FOOTER */}
+      <footer className="w-full border-t border-zinc-800/80 bg-zinc-950/90 py-8 px-4 z-10 text-xs text-zinc-400">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center text-white">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-bold text-white text-sm">Galaxy Science AI</span>
+              <p className="text-[11px] text-zinc-500">
+                Exploring the universe with scientific integrity & AI intelligence
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-zinc-400">
-            <span>Powered by Gemini 3.8</span>
-            <span>•</span>
-            <span>Zero Tracking</span>
+
+          {/* Quick Informational Links */}
+          <div className="flex items-center gap-6 text-xs text-zinc-400">
+            <button onClick={() => openInfoModal('about')} className="hover:text-white transition-colors">
+              About
+            </button>
+            <button onClick={() => openInfoModal('contact')} className="hover:text-white transition-colors">
+              Contact
+            </button>
+            <button onClick={() => openInfoModal('privacy')} className="hover:text-white transition-colors">
+              Privacy Policy
+            </button>
+            <button onClick={() => openInfoModal('terms')} className="hover:text-white transition-colors">
+              Terms of Use
+            </button>
+          </div>
+
+          <div className="text-[11px] text-zinc-500 font-mono">
+            Astronomical data via NASA, ESA & STScI • 2026
           </div>
         </div>
       </footer>

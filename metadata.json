@@ -1,6 +1,6 @@
 {
-  "name": "Nexus Search - AI Real-Time Web Engine",
-  "description": "Next-generation AI search engine powered by real-time Google Search grounding, deep synthesis, multi-source citations, and interactive research exploration.",
+  "name": "Galaxy Science AI - Space Science & Astronomy Platform",
+  "description": "Futuristic AI-powered space science and astronomy platform. Explore galaxies, 3D interactive solar system, black holes, exoplanets, space missions, cosmic calculators, and conversational astrophysics AI in English & Bengali.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
