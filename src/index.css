@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply antialiased selection:bg-cyan-500/30 selection:text-cyan-200;
+  }
+}
+
+/* Custom styled markdown output */
+.prose-search {
+  @apply text-zinc-200 leading-relaxed text-[15px];
+}
+
+.prose-search h1,
+.prose-search h2,
+.prose-search h3,
+.prose-search h4 {
+  @apply font-semibold tracking-tight text-white mt-6 mb-3 flex items-center gap-2;
+}
+
+.prose-search h1 {
+  @apply text-2xl font-bold border-b border-zinc-800 pb-2;
+}
+
+.prose-search h2 {
+  @apply text-xl text-zinc-100;
+}
+
+.prose-search h3 {
+  @apply text-lg text-cyan-300;
+}
+
+.prose-search p {
+  @apply mb-4 leading-7 text-zinc-300;
+}
+
+.prose-search strong {
+  @apply text-white font-semibold;
+}
+
+.prose-search ul {
+  @apply list-disc list-outside ml-5 mb-4 space-y-1.5 text-zinc-300;
+}
+
+.prose-search ol {
+  @apply list-decimal list-outside ml-5 mb-4 space-y-1.5 text-zinc-300;
+}
+
+.prose-search li {
+  @apply pl-1;
+}
+
+.prose-search blockquote {
+  @apply border-l-2 border-cyan-500/60 bg-zinc-900/60 px-4 py-2.5 my-4 rounded-r-lg text-zinc-300 italic;
+}
+
+.prose-search code:not(pre code) {
+  @apply font-mono text-[13px] px-1.5 py-0.5 rounded bg-zinc-800/90 text-cyan-300 border border-zinc-700/60;
+}
+
+.prose-search pre {
+  @apply font-mono text-[13px] p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 my-4 overflow-x-auto text-zinc-200 leading-normal shadow-inner;
+}
+
+.prose-search pre code {
+  @apply bg-transparent border-0 p-0 text-inherit;
+}
+
+.prose-search table {
+  @apply w-full border-collapse my-5 text-sm rounded-lg overflow-hidden border border-zinc-800;
+}
+
+.prose-search th {
+  @apply bg-zinc-800/90 text-zinc-200 px-4 py-2.5 text-left font-semibold border-b border-zinc-700;
+}
+
+.prose-search td {
+  @apply px-4 py-2.5 border-b border-zinc-800/80 text-zinc-300;
+}
+
+.prose-search tr:last-child td {
+  @apply border-b-0;
+}
+
+.prose-search tr:hover td {
+  @apply bg-zinc-800/40;
+}
+
+.prose-search a {
+  @apply text-cyan-400 hover:text-cyan-300 underline underline-offset-4 decoration-cyan-500/40 transition-colors;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(113, 113, 122, 0.5);
+}

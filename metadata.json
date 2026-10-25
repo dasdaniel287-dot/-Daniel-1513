@@ -1,0 +1,6 @@
+{
+  "name": "Nexus Search - AI Real-Time Web Engine",
+  "description": "Next-generation AI search engine powered by real-time Google Search grounding, deep synthesis, multi-source citations, and interactive research exploration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
